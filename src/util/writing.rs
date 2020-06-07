@@ -2,22 +2,22 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Color {
-    Black = 0 << 4,
-    Blue = 1 << 4,
-    Green = 2 << 4,
-    Cyan = 3 << 4,
-    Red = 4 << 4,
-    Magenta = 5 << 4,
-    Brown = 6 << 4,
-    LightGray = 7 << 4,
-    DarkGray = 8 << 4,
-    LightBlue = 9 << 4,
-    LightGreen = 10 << 4,
-    LightCyan = 11 << 4,
-    LightRed = 12 << 4,
-    Pink = 13 << 4,
-    Yellow = 14 << 4,
-    White = 15 << 4,
+    Black = 0,
+    Blue = 1,
+    Green = 2,
+    Cyan = 3,
+    Red = 4,
+    Magenta = 5,
+    Brown = 6,
+    LightGray = 7,
+    DarkGray = 8,
+    LightBlue = 9,
+    LightGreen = 10,
+    LightCyan = 11,
+    LightRed = 12,
+    Pink = 13,
+    Yellow = 14,
+    White = 15,
 }
 
 #[allow(dead_code)]
@@ -39,24 +39,126 @@ pub enum BgColor {
 pub struct ColorCode(u8); 
 
 impl ColorCode {
+    //No need to specify background as black is 0
+    const NEUTRAL_COLOR_CODE: ColorCode = ColorCode(Color::White as u8);
+
     pub fn new(foreground: Color, background: BgColor, blink: bool) -> ColorCode {
-        ColorCode((foreground as u8) << 4 | (background as u8) << 1 | if blink { 1 } else { 0 });
+        ColorCode((foreground as u8) | (background as u8) << 4 | if blink {1} else {0} << 7)
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
-pub struct ScreenChar {
+struct ScreenChar {
     ascii: u8,
     color_code: ColorCode,
 }
 
 impl ScreenChar {
+    const BLANK: ScreenChar = ScreenChar { ascii: ' ' as u8, color_code: ColorCode::NEUTRAL_COLOR_CODE };
+
     pub fn new(ascii: u8, color_code: ColorCode) -> ScreenChar {
         ScreenChar { ascii, color_code }
     }
 
     pub fn white_char(ascii: u8) -> ScreenChar {
-        ScreenChar::new(ascii, ColorCode::new(Color::White, BgColor::Black, false))
+        ScreenChar::new(ascii, ColorCode::NEUTRAL_COLOR_CODE)
+    }
+}
+
+const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
+const BUFFER_HEIGHT: usize = 25;
+const BUFFER_WIDTH: usize = 80;
+
+#[repr(transparent)]
+struct Buffer {
+    chars: [ScreenChar; BUFFER_WIDTH * BUFFER_HEIGHT]
+}
+
+impl Buffer {
+    fn to_raw_ptr(&mut self) -> *mut ScreenChar {
+        self as *mut _ as *mut ScreenChar
+    }
+}
+
+pub struct Writer {
+    color_code: ColorCode,
+    curr_position: usize,
+    buffer: &'static mut Buffer,
+}
+
+impl Writer {
+    const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
+
+    pub fn default_writer() -> Writer {
+        Writer { 
+            color_code: ColorCode::NEUTRAL_COLOR_CODE,
+            curr_position: 0,
+            buffer: unsafe { &mut *(DEFAULT_VGA_BUFFER_ADDRESS as *mut Buffer) }
+        }
+    }
+
+    fn get_lines_written(&self) -> usize {
+        self.curr_position / BUFFER_WIDTH
+    }
+
+    fn needs_shift_up(&self) -> bool {
+        let next_line = self.get_lines_written() + 1;
+        next_line > BUFFER_HEIGHT
+    }
+
+    fn clean_line(&mut self, line: usize) {
+        assert!(line < BUFFER_HEIGHT);
+        let starting_pos = (line * BUFFER_WIDTH) as usize;
+        let ending_pos = ((line + 1) * BUFFER_WIDTH) as usize;
+
+        for index in starting_pos..ending_pos {
+            self.buffer.chars[index] = ScreenChar::BLANK;
+        }
+    }
+
+    fn shift_up(&mut self) {
+        let pointer = self.buffer.to_raw_ptr();
+        unsafe {
+            super::algorithm::copy(
+                //Copy from second line till the end
+                pointer.offset(BUFFER_WIDTH as isize),
+                pointer.offset((BUFFER_WIDTH * BUFFER_HEIGHT) as isize),
+                //To the first line (effectively, it removes first line)
+                pointer
+            );
+        }
+        //Clean last line, that still has contents of the last last line
+        self.clean_line(BUFFER_HEIGHT - 1);
+
+        //Set position to last line
+        self.curr_position = BUFFER_WIDTH * (BUFFER_HEIGHT - 1)
+    }
+
+    fn shift_up_if_needed(&mut self) {
+        if self.needs_shift_up() { self.shift_up() };
+    }
+
+    fn new_line(&mut self) {
+        self.curr_position = (self.get_lines_written() + 1) * BUFFER_WIDTH;
+        self.shift_up_if_needed();
+    }
+
+    pub fn write_byte_color(&mut self, byte: u8, color: ColorCode) {
+        match byte {
+            b'\n' => self.new_line(),
+            byte => {
+                self.buffer.chars[self.curr_position] = ScreenChar {
+                    ascii: byte,
+                    color_code: color,
+                };
+                self.curr_position += 1;
+                self.shift_up_if_needed();
+            }
+        }
+    }
+
+    pub fn write_byte(&mut self, byte: u8) {
+        self.write_byte_color(byte, self.color_code);
     }
 }

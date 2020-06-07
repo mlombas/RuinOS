@@ -10,20 +10,26 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-static DEFAULT_VGA_BUFFER_ADDRESS: u64 = 0xb8000;
+static HELLO: &[u8] = b"Welcome to RustOS\nHow may I help you\n";
 
-static HELLO: &[u8] = b"Welcome to RuinOS";
+use util::writing::{Writer, ColorCode, Color, BgColor};
 
-use util::writing::ScreenChar;
+const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
+const BUFFER_WIDTH: usize = 80;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    let vga_buffer = DEFAULT_VGA_BUFFER_ADDRESS as *mut u8;
+    let mut writer = Writer::default_writer();
     for (i, &byte) in HELLO.iter().enumerate() {
-        unsafe {
-            vga_buffer.offset(i as isize * 2) = ScreenChar::white_char(byte) as u16;
-        }
+        writer.write_byte(byte);
     }
 
-    loop{}
+    let mut c = 'a';
+    loop{
+        for _ in 0..5000 {}
+        writer.write_byte(c as u8);
+
+        c = ((c as u8) + 1) as char;
+        if c > 'z' { c = 'a' };
+    }
 }
