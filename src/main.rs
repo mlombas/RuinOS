@@ -6,7 +6,8 @@ mod util;
 use core::panic::PanicInfo;
 
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
 
@@ -22,5 +23,6 @@ pub extern "C" fn _start() -> ! {
     println!("{}", HELLO);
     println!("Today is a {} day!", "great");
 
+    panic!("Haha nope");
     loop{ }
 }
