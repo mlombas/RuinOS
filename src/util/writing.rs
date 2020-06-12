@@ -70,9 +70,10 @@ const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
 
-#[repr(transparent)]
+use volatile::Volatile;
 struct Buffer {
-    chars: [ScreenChar; BUFFER_WIDTH * BUFFER_HEIGHT]
+    //Needs to be volatile to ensure writes
+    chars: [Volatile<ScreenChar>; BUFFER_WIDTH * BUFFER_HEIGHT]
 }
 
 impl Buffer {
@@ -133,7 +134,7 @@ impl Writer {
         let ending_pos = ((line + 1) * BUFFER_WIDTH) as usize;
 
         for index in starting_pos..ending_pos {
-            self.buffer.chars[index] = ScreenChar::BLANK;
+            self.buffer.chars[index].write(ScreenChar::BLANK);
         }
     }
 
@@ -168,10 +169,12 @@ impl Writer {
         match byte {
             b'\n' => self.new_line(),
             byte => {
-                self.buffer.chars[self.curr_position] = ScreenChar {
-                    ascii: byte,
-                    color_code: color,
-                };
+                self.buffer.chars[self.curr_position].write(
+                    ScreenChar {
+                        ascii: byte,
+                        color_code: color,
+                    }
+                );
                 self.curr_position += 1;
                 self.shift_up_if_needed();
             }
