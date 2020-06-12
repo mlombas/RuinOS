@@ -89,6 +89,7 @@ pub struct Writer {
 
 impl Writer {
     const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
+    const NOT_VALID_ASCII_CHAR: u8 = 0xfe;
 
     pub fn default_writer() -> Writer {
         Writer { 
@@ -160,5 +161,19 @@ impl Writer {
 
     pub fn write_byte(&mut self, byte: u8) {
         self.write_byte_color(byte, self.color_code);
+    }
+}
+
+use core::fmt;
+impl fmt::Write for Writer {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for byte in s.bytes() {
+            match byte {
+                0x20..=0x7e | b'\n' => self.write_byte(byte),
+                _ => self.write_byte(Self::NOT_VALID_ASCII_CHAR),
+            }
+        }
+
+        Ok(())
     }
 }

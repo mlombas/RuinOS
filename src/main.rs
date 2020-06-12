@@ -10,7 +10,7 @@ fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
 
-static HELLO: &[u8] = b"Welcome to RustOS\nHow may I help you\n";
+static HELLO: &'static str = "Welcome to RustOS\nHow may I help you\n";
 
 use util::writing::{Writer, ColorCode, Color, BgColor};
 
@@ -19,17 +19,11 @@ const BUFFER_WIDTH: usize = 80;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
+    use core::fmt::Write;
     let mut writer = Writer::default_writer();
-    for (i, &byte) in HELLO.iter().enumerate() {
-        writer.write_byte(byte);
-    }
+    writer.write_str(HELLO);
+    writer.write_str("henlö");
+    write!(writer, "Does this wörk?");
 
-    let mut c = 'a';
-    loop{
-        for _ in 0..5000 {}
-        writer.write_byte(c as u8);
-
-        c = ((c as u8) + 1) as char;
-        if c > 'z' { c = 'a' };
-    }
+    loop{ }
 }
