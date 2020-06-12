@@ -188,6 +188,9 @@ impl fmt::Write for Writer {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for byte in s.bytes() {
             match byte {
+                //Print only valid characters, which are in the range below or
+                //the \n char
+                //else, print the specified char
                 0x20..=0x7e | b'\n' => self.write_byte(byte),
                 _ => self.write_byte(Self::NOT_VALID_ASCII_CHAR),
             }
@@ -195,4 +198,21 @@ impl fmt::Write for Writer {
 
         Ok(())
     }
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ($crate::util::writing::_print(format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! println {
+    () => ($crate::print!("\n"));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[doc(hidden)]
+pub fn _print(args: fmt::Arguments) {
+    use core::fmt::Write;
+    Writer::global_writer().lock().write_fmt(args).unwrap();
 }

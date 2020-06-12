@@ -19,11 +19,8 @@ const BUFFER_WIDTH: usize = 80;
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-    use core::fmt::Write;
-    Writer::global_writer().lock().write_str(HELLO);
-    Writer::global_writer().lock().write_str("henlö");
-
-    write!(Writer::global_writer().lock(), "Does this wörk?");
+    println!("{}", HELLO);
+    println!("Today is a {} day!", "great");
 
     loop{ }
 }
