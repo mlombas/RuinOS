@@ -6,3 +6,4 @@ edition = "2018"
 
 [dependencies]
 bootloader = "0.9.3"
+spin = "0.5.2"

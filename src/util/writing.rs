@@ -87,6 +87,9 @@ pub struct Writer {
     buffer: &'static mut Buffer,
 }
 
+use spin::Mutex;
+static mut WRITER: Option<Mutex<Writer>> = None;
+
 impl Writer {
     const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
     const NOT_VALID_ASCII_CHAR: u8 = 0xfe;
@@ -96,6 +99,22 @@ impl Writer {
             color_code: ColorCode::NEUTRAL_COLOR_CODE,
             curr_position: 0,
             buffer: unsafe { &mut *(DEFAULT_VGA_BUFFER_ADDRESS as *mut Buffer) }
+        }
+    }
+
+    pub fn global_writer() -> &'static mut Mutex<Writer> {
+        //If WRITER is init, return it
+        //Init WRITER if its not, then call this again to return it
+        
+        //Need unsafe as we are toying with mutable static
+        unsafe {
+            match &mut WRITER {
+                None => {
+                    WRITER = Some(Mutex::new(Self::default_writer()));
+                    Self::global_writer()
+                },
+                Some(mutex) => mutex,
+            }
         }
     }
 
