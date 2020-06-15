@@ -89,7 +89,10 @@ pub struct Writer {
 }
 
 use spin::Mutex;
-static mut WRITER: Option<Mutex<Writer>> = None;
+use lazy_static::lazy_static;
+lazy_static! {
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer::default_writer());
+}
 
 impl Writer {
     const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
@@ -100,22 +103,6 @@ impl Writer {
             color_code: ColorCode::NEUTRAL_COLOR_CODE,
             curr_position: 0,
             buffer: unsafe { &mut *(DEFAULT_VGA_BUFFER_ADDRESS as *mut Buffer) }
-        }
-    }
-
-    pub fn global_writer() -> &'static mut Mutex<Writer> {
-        //If WRITER is init, return it
-        //Init WRITER if its not, then call this again to return it
-        
-        //Need unsafe as we are toying with mutable static
-        unsafe {
-            match &mut WRITER {
-                None => {
-                    WRITER = Some(Mutex::new(Self::default_writer()));
-                    Self::global_writer()
-                },
-                Some(mutex) => mutex,
-            }
         }
     }
 
@@ -141,7 +128,7 @@ impl Writer {
     fn shift_up(&mut self) {
         let pointer = self.buffer.to_raw_ptr();
         unsafe {
-            super::algorithm::copy(
+            crate::util::algorithm::copy(
                 //Copy from second line till the end
                 pointer.offset(BUFFER_WIDTH as isize),
                 pointer.offset((BUFFER_WIDTH * BUFFER_HEIGHT) as isize),
@@ -205,7 +192,7 @@ impl fmt::Write for Writer {
 
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::util::writing::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::io::writing::_print(format_args!($($arg)*)));
 }
 
 #[macro_export]
@@ -217,5 +204,7 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    Writer::global_writer().lock().write_fmt(args).unwrap();
+    unsafe { 
+        WRITER.lock().write_fmt(args).unwrap();
+    } 
 }
