@@ -2,17 +2,18 @@
 #![no_main]
 #![allow(dead_code)]
 
+use ruin_os::{print,println};
+use ruin_os::util::halt_loop;
 use core::panic::PanicInfo;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+
+    halt_loop()
 }
 
 static HELLO: &'static str = "Welcome to RustOS\nHow may I help you\n";
-
-use ruin_os::{print,println};
 
 const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
 const BUFFER_WIDTH: usize = 80;
@@ -23,7 +24,5 @@ pub extern "C" fn _start() -> ! {
 
     ruin_os::init();
 
-    loop{
-        print!("-");
-    }
+    halt_loop()
 }
