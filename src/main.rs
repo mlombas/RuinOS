@@ -12,7 +12,7 @@ fn panic(info: &PanicInfo) -> ! {
 
 static HELLO: &'static str = "Welcome to RustOS\nHow may I help you\n";
 
-use ruin_os::println;
+use ruin_os::{print,println};
 
 const DEFAULT_VGA_BUFFER_ADDRESS: usize = 0xb8000;
 const BUFFER_WIDTH: usize = 80;
@@ -23,5 +23,7 @@ pub extern "C" fn _start() -> ! {
 
     ruin_os::init();
 
-    loop{ }
+    loop{
+        print!("-");
+    }
 }
