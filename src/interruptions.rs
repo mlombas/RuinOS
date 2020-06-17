@@ -1,3 +1,5 @@
+pub mod pic;
+
 use lazy_static::lazy_static;
 
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
@@ -21,6 +23,8 @@ pub fn init_idt() {
     IDT.load();
 }
 
+//Exceptions
+
 extern "x86-interrupt" fn breakpoint_handler(
     stack_frame: &mut InterruptStackFrame
 ) {
@@ -31,4 +35,20 @@ extern "x86-interrupt" fn double_fault_handler(
     stack_frame: &mut InterruptStackFrame, _error_code: u64
 ) -> ! {
     panic!("Double fault:\n{:#?}", stack_frame);
+}
+
+//Interrupts
+
+use pic::Pics;
+use spin;
+
+const PIC_1_OFFSET: usize = 32;
+const PIC_2_OFFSET: usize = PIC_1_OFFSET + 8;
+
+pub static PICS: spin::Mutex<Pics> = 
+    spin::Mutex::new( unsafe { Pics::new(PIC_1_OFFSET, PIC_2_OFFSET) } );
+
+pub fn init_interrupts() {
+    unsafe { PICS.lock().init(); }
+    x86_64::instructions::interrupts::enable();
 }

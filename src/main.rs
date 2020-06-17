@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![allow(dead_code)]
 
 use core::panic::PanicInfo;
 
@@ -22,10 +23,6 @@ pub extern "C" fn _start() -> ! {
 
     ruin_os::init();
     x86_64::instructions::interrupts::int3();
-
-    fn overflow() {
-        overflow()
-    }
 
     overflow();
 

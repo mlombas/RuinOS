@@ -204,7 +204,5 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    unsafe { 
-        WRITER.lock().write_fmt(args).unwrap();
-    } 
+    WRITER.lock().write_fmt(args).unwrap();
 }
