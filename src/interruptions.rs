@@ -3,7 +3,7 @@ pub mod pic;
 use lazy_static::lazy_static;
 
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame};
-use crate::println;
+use crate::{print, println};
 use crate::gdt;
 
 lazy_static! {
@@ -14,6 +14,7 @@ lazy_static! {
             idt.double_fault.set_handler_fn(double_fault_handler)
                 .set_stack_index(gdt::DOUBLE_FAULT_IST_INDEX);
         }
+        idt[Interrupt::TIMER.as_usize()].set_handler_fn(timer_interrupt_handler);
 
         idt
     };
@@ -51,4 +52,28 @@ pub static PICS: spin::Mutex<Pics> =
 pub fn init_interrupts() {
     unsafe { PICS.lock().init(); }
     x86_64::instructions::interrupts::enable();
+}
+
+#[derive(Debug, Clone, Copy)]
+#[repr(usize)]
+enum Interrupt {
+    TIMER = PIC_1_OFFSET,
+}
+
+impl Interrupt {
+    fn as_u8(&self) -> u8 {
+        self.as_usize() as u8
+    }
+
+    fn as_usize(&self) -> usize {
+        *self as usize
+    }
+}
+
+extern "x86-interrupt" fn timer_interrupt_handler(
+    _stack_frame: &mut InterruptStackFrame
+) {
+    print!(".");
+
+    unsafe { PICS.lock().end_interrupt(Interrupt::TIMER.as_u8()); }
 }

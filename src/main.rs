@@ -22,11 +22,6 @@ pub extern "C" fn _start() -> ! {
     println!("Henlo");
 
     ruin_os::init();
-    x86_64::instructions::interrupts::int3();
-
-    overflow();
-
-    println!("No crash boi");
 
     loop{ }
 }
