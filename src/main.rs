@@ -24,5 +24,8 @@ pub extern "C" fn _start() -> ! {
 
     ruin_os::init();
 
+    let jaja = 0xdeadbeaf as *mut u32;
+    unsafe { *jaja = 69 };
+
     halt_loop()
 }

@@ -1,6 +1,5 @@
 //I looked at pic8259_simple crate source code to know how to do this
-extern crate cpuio;
-use cpuio::UnsafePort; 
+use x86_64::instructions::port::Port;
 
 //Const values to send over to the pics
 const INIT: u8 = 0x11;
@@ -11,8 +10,8 @@ const MODE: u8 = 0x01; //Select mode 8086
 struct Pic {
     //Need to map this so it doesn't collide with exceptions
     offset: usize,
-    command: UnsafePort<u8>,
-    data: UnsafePort<u8>,
+    command: Port<u8>,
+    data: Port<u8>,
 }
 
 impl Pic {
@@ -45,13 +44,13 @@ impl Pics {
         Pics {
             primary: Pic {
                 offset: primary_offset,
-                command: UnsafePort::new(0x20),
-                data: UnsafePort::new(0x21),
+                command: Port::new(0x20),
+                data: Port::new(0x21),
             }, 
             secondary: Pic {
                 offset: secondary_offset,
-                command: UnsafePort::new(0xa0),
-                data: UnsafePort::new(0xa1),
+                command: Port::new(0xa0),
+                data: Port::new(0xa1),
             }
         }
     }
@@ -60,7 +59,7 @@ impl Pics {
         //This is used as a delay on pic8259_simple, so I use it here also,
         //port 0x80 is a garbage port, but takes long enough to write there
         //to let us wait properly for the other ports to write
-        let mut wait_port = UnsafePort::<u8>::new(0x80);
+        let mut wait_port = Port::<u8>::new(0x80);
         
         let primary_mask = self.primary.data.read();
         wait_port.write(0);
